@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WP Sync Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #07080d;
+  --surface: #0e1018;
+  --card: #13151f;
+  --card2: #181b27;
+  --border: #222536;
+  --border2: #2d3148;
+  --accent: #5b6af7;
+  --accent-glow: rgba(91,106,247,0.15);
+  --green: #00d97e;
+  --green-glow: rgba(0,217,126,0.12);
+  --orange: #ff8c42;
+  --red: #ff4f6a;
+  --text: #dde1f5;
+  --muted: #555a7a;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Syne', sans-serif;
+}
+body { background:var(--bg); color:var(--text); font-family:var(--sans); min-height:100vh; display:flex; overflow:hidden; }
+
+/* SIDEBAR */
+.sidebar { width:220px; min-width:220px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; height:100vh; }
+.logo { padding:22px 18px 18px; border-bottom:1px solid var(--border); }
+.logo-mark { display:flex; align-items:center; gap:10px; }
+.logo-icon { width:34px; height:34px; background:var(--accent); border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:0 0 24px var(--accent-glow); }
+.logo-text { font-size:14px; font-weight:800; letter-spacing:0.01em; }
+.logo-sub { font-size:10px; color:var(--muted); font-family:var(--mono); margin-top:2px; }
+.site-selector { padding:14px; border-bottom:1px solid var(--border); }
+.site-label { font-size:9px; font-family:var(--mono); color:var(--muted); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:8px; }
+.site-dropdown { background:var(--card); border:1px solid var(--border2); border-radius:8px; padding:8px 12px; color:var(--text); font-family:var(--sans); font-size:12px; width:100%; cursor:pointer; display:flex; align-items:center; justify-content:space-between; }
+.site-dot { width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green); animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.nav { padding:10px 8px; flex:1; display:flex; flex-direction:column; gap:1px; }
+.nav-section { font-size:9px; font-family:var(--mono); color:var(--muted); letter-spacing:0.1em; text-transform:uppercase; padding:10px 10px 5px; }
+.nav-item { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:7px; cursor:pointer; font-size:13px; color:var(--muted); transition:all 0.15s; position:relative; border:1px solid transparent; }
+.nav-item:hover { background:var(--card); color:var(--text); }
+.nav-item.active { background:var(--accent-glow); color:var(--accent); border-color:rgba(91,106,247,0.2); }
+.nav-item.active::before { content:''; position:absolute; left:0; top:50%; transform:translateY(-50%); width:3px; height:16px; background:var(--accent); border-radius:0 2px 2px 0; }
+.nav-icon { font-size:14px; width:18px; text-align:center; }
+.nav-badge { margin-left:auto; background:var(--red); color:white; font-size:9px; font-family:var(--mono); padding:1px 5px; border-radius:10px; }
+.sidebar-bottom { padding:12px; border-top:1px solid var(--border); }
+.user-card { display:flex; align-items:center; gap:10px; padding:8px 10px; background:var(--card); border-radius:8px; cursor:pointer; }
+.user-avatar { width:28px; height:28px; border-radius:6px; background:linear-gradient(135deg,var(--accent),#a855f7); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; }
+.user-name { font-size:11px; font-weight:600; }
+.user-role { font-size:9px; color:var(--muted); font-family:var(--mono); }
+
+/* MAIN */
+.main { flex:1; display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+.header { padding:16px 26px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:var(--surface); }
+.header-left h1 { font-size:17px; font-weight:800; }
+.header-left p { font-size:10px; color:var(--muted); font-family:var(--mono); margin-top:2px; }
+.header-right { display:flex; align-items:center; gap:8px; }
+.env-badge { display:flex; align-items:center; gap:6px; padding:5px 11px; border-radius:6px; font-size:10px; font-family:var(--mono); border:1px solid; }
+.env-badge.local { background:rgba(255,140,66,0.1); border-color:rgba(255,140,66,0.3); color:var(--orange); }
+.env-badge.live { background:var(--green-glow); border-color:rgba(0,217,126,0.3); color:var(--green); }
+.btn { padding:8px 15px; border-radius:7px; border:none; cursor:pointer; font-family:var(--sans); font-size:12px; font-weight:600; transition:all 0.15s; display:flex; align-items:center; gap:5px; }
+.btn-primary { background:var(--accent); color:white; box-shadow:0 4px 16px rgba(91,106,247,0.3); }
+.btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(91,106,247,0.4); }
+.btn-outline { background:transparent; border:1px solid var(--border2); color:var(--text); }
+.btn-outline:hover { background:var(--card); }
+
+.content { flex:1; overflow-y:auto; padding:20px 26px; }
+.content::-webkit-scrollbar { width:4px; }
+.content::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+
+/* STATS */
+.status-bar { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:20px; }
+.stat-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px 16px; position:relative; overflow:hidden; animation:fadeUp 0.4s ease both; }
+.stat-card:nth-child(1){animation-delay:0.05s} .stat-card:nth-child(2){animation-delay:0.1s} .stat-card:nth-child(3){animation-delay:0.15s} .stat-card:nth-child(4){animation-delay:0.2s}
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+.stat-label { font-size:9px; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; }
+.stat-value { font-size:22px; font-weight:800; margin-bottom:3px; }
+.stat-value.blue{color:var(--accent)} .stat-value.green{color:var(--green)} .stat-value.orange{color:var(--orange)} .stat-value.red{color:var(--red)}
+.stat-sub { font-size:10px; color:var(--muted); font-family:var(--mono); }
+
+/* PROGRESS */
+.progress-wrap { display:none; margin-bottom:14px; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:12px 16px; }
+.progress-wrap.visible { display:block; }
+.progress-label { font-size:10px; font-family:var(--mono); color:var(--muted); margin-bottom:8px; display:flex; justify-content:space-between; }
+.progress-bar { height:4px; background:var(--border2); border-radius:2px; overflow:hidden; }
+.progress-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--green)); border-radius:2px; width:0%; transition:width 0.5s ease; }
+
+/* SYNC GRID */
+.sync-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px; }
+.sync-card { background:var(--card); border:1px solid var(--border); border-radius:13px; overflow:hidden; animation:fadeUp 0.4s ease both; }
+.sync-card:nth-child(1){animation-delay:0.25s} .sync-card:nth-child(2){animation-delay:0.3s}
+.sync-card-header { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.sync-card-title { font-size:13px; font-weight:700; display:flex; align-items:center; gap:7px; }
+.sync-card-body { padding:14px 16px; }
+
+.component-list { display:flex; flex-direction:column; gap:7px; }
+.component-row { display:flex; align-items:center; gap:9px; padding:9px 11px; background:var(--card2); border:1px solid var(--border); border-radius:8px; cursor:pointer; transition:all 0.15s; }
+.component-row:hover { border-color:var(--border2); background:#1a1d2c; }
+.component-row.selected { border-color:var(--accent); background:var(--accent-glow); }
+.comp-check { width:16px; height:16px; border-radius:4px; border:1.5px solid var(--border2); display:flex; align-items:center; justify-content:center; font-size:9px; transition:all 0.15s; flex-shrink:0; color:white; }
+.component-row.selected .comp-check { background:var(--accent); border-color:var(--accent); }
+.comp-icon { font-size:15px; }
+.comp-info { flex:1; }
+.comp-name { font-size:12px; font-weight:600; }
+.comp-detail { font-size:10px; color:var(--muted); font-family:var(--mono); margin-top:1px; }
+.comp-status { font-size:9px; font-family:var(--mono); padding:3px 7px; border-radius:4px; white-space:nowrap; }
+.comp-status.changed { background:rgba(255,140,66,0.15); color:var(--orange); }
+.comp-status.synced { background:var(--green-glow); color:var(--green); }
+.comp-status.behind { background:rgba(255,79,106,0.12); color:var(--red); }
+
+/* ACTION BAR */
+.action-bar { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px 18px; display:flex; align-items:center; gap:10px; margin-bottom:16px; animation:fadeUp 0.4s ease 0.35s both; }
+.action-bar-label { font-size:11px; font-family:var(--mono); color:var(--muted); flex:1; }
+.action-bar-label span { color:var(--accent); font-weight:700; }
+.btn-pull { background:rgba(0,217,126,0.1); border:1px solid rgba(0,217,126,0.3); color:var(--green); padding:8px 18px; border-radius:7px; font-family:var(--sans); font-size:12px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.15s; }
+.btn-pull:hover { background:rgba(0,217,126,0.18); transform:translateY(-1px); }
+.btn-push { background:rgba(91,106,247,0.1); border:1px solid rgba(91,106,247,0.3); color:var(--accent); padding:8px 18px; border-radius:7px; font-family:var(--sans); font-size:12px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.15s; }
+.btn-push:hover { background:rgba(91,106,247,0.18); transform:translateY(-1px); }
+
+/* TERMINAL */
+.terminal { background:#080a10; border:1px solid var(--border); border-radius:13px; overflow:hidden; animation:fadeUp 0.4s ease 0.4s both; margin-bottom:16px; }
+.terminal-header { background:var(--surface); padding:10px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+.term-dots { display:flex; gap:5px; }
+.term-dot { width:10px; height:10px; border-radius:50%; }
+.term-dot.red{background:#ff5f57} .term-dot.yellow{background:#febc2e} .term-dot.green{background:#28c840}
+.term-title { flex:1; text-align:center; font-family:var(--mono); font-size:10px; color:var(--muted); }
+.terminal-body { padding:14px; font-family:var(--mono); font-size:11px; line-height:1.7; min-height:130px; max-height:180px; overflow-y:auto; }
+.terminal-body::-webkit-scrollbar { width:3px; }
+.terminal-body::-webkit-scrollbar-thumb { background:var(--border2); }
+.term-line { display:flex; gap:7px; }
+.term-prompt{color:var(--accent)} .term-cmd{color:#a0d8ef} .term-out{color:#8b9bc1} .term-success{color:var(--green)} .term-error{color:var(--red)} .term-warn{color:var(--orange)}
+.cursor { display:inline-block; width:7px; height:13px; background:var(--accent); vertical-align:middle; animation:blink 1s step-end infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* ACTIVITY */
+.section-title { font-size:10px; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:10px; }
+.activity-list { display:flex; flex-direction:column; gap:6px; }
+.activity-item { display:flex; align-items:center; gap:11px; padding:9px 13px; background:var(--card); border:1px solid var(--border); border-radius:8px; font-size:11px; }
+.activity-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.activity-dot.pull{background:var(--green)} .activity-dot.push{background:var(--accent)} .activity-dot.fail{background:var(--red)}
+.activity-text { flex:1; }
+.activity-user { color:var(--muted); margin-left:4px; }
+.activity-time { font-family:var(--mono); font-size:10px; color:var(--muted); }
+
+/* TABS */
+.tabs { display:flex; gap:2px; background:var(--card2); border-radius:7px; padding:3px; margin-bottom:12px; }
+.tab { padding:5px 12px; border-radius:5px; font-size:11px; cursor:pointer; color:var(--muted); transition:all 0.15s; border:none; background:none; font-family:var(--sans); }
+.tab.active { background:var(--card); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,0.3); }
+
+/* MODAL */
+.modal-overlay { position:fixed; inset:0; background:rgba(7,8,13,0.85); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:1000; opacity:0; pointer-events:none; transition:opacity 0.2s; }
+.modal-overlay.open { opacity:1; pointer-events:all; }
+.modal { background:var(--card); border:1px solid var(--border2); border-radius:16px; width:480px; max-width:90vw; box-shadow:0 24px 60px rgba(0,0,0,0.6); transform:translateY(16px); transition:transform 0.2s; }
+.modal-overlay.open .modal { transform:translateY(0); }
+.modal-header { padding:18px 22px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.modal-header h2 { font-size:15px; font-weight:700; }
+.modal-close { background:none; border:none; color:var(--muted); cursor:pointer; font-size:17px; padding:2px 6px; border-radius:4px; }
+.modal-close:hover { background:var(--card2); color:var(--text); }
+.modal-body { padding:18px 22px; }
+.form-group { margin-bottom:12px; }
+.form-label { display:block; font-size:9px; font-family:var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:5px; }
+.form-input { width:100%; background:var(--card2); border:1px solid var(--border2); border-radius:7px; padding:8px 11px; color:var(--text); font-family:var(--mono); font-size:12px; outline:none; transition:border-color 0.15s; }
+.form-input:focus { border-color:var(--accent); }
+.form-input::placeholder { color:var(--muted); }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.modal-footer { padding:14px 22px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; }
+
+/* TOAST */
+.toast { position:fixed; bottom:22px; right:22px; padding:11px 16px; border-radius:9px; font-size:11px; font-family:var(--mono); z-index:9998; transform:translateY(80px); opacity:0; transition:all 0.3s ease; display:flex; align-items:center; gap:7px; }
+.toast.show { transform:translateY(0); opacity:1; }
+.toast.success { background:rgba(0,217,126,0.15); border:1px solid rgba(0,217,126,0.4); color:var(--green); }
+.toast.error { background:rgba(255,79,106,0.15); border:1px solid rgba(255,79,106,0.4); color:var(--red); }
+.toast.info { background:var(--accent-glow); border:1px solid rgba(91,106,247,0.4); color:var(--accent); }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">
+      <div class="logo-icon">⚡</div>
+      <div>
+        <div class="logo-text">WP Sync</div>
+        <div class="logo-sub">v1.0 · prototype</div>
+      </div>
+    </div>
+  </div>
+  <div class="site-selector">
+    <div class="site-label">Active Site</div>
+    <div class="site-dropdown" onclick="openSiteModal()">
+      <span>mycompany.com</span>
+      <div class="site-dot"></div>
+    </div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">Main</div>
+    <div class="nav-item active" onclick="setNav(this,'Dashboard')"><span class="nav-icon">⊞</span> Dashboard</div>
+    <div class="nav-item" onclick="setNav(this,'Sync Center')"><span class="nav-icon">⇅</span> Sync Center</div>
+    <div class="nav-item" onclick="setNav(this,'Git Manager')"><span class="nav-icon">◎</span> Git Manager <span class="nav-badge">3</span></div>
+    <div class="nav-section">Tools</div>
+    <div class="nav-item" onclick="setNav(this,'Database')"><span class="nav-icon">🗄</span> Database</div>
+    <div class="nav-item" onclick="setNav(this,'Plugins')"><span class="nav-icon">⬡</span> Plugins</div>
+    <div class="nav-item" onclick="setNav(this,'Media / Uploads')"><span class="nav-icon">◫</span> Media</div>
+    <div class="nav-section">Settings</div>
+    <div class="nav-item" onclick="openSiteModal()"><span class="nav-icon">⊕</span> Manage Sites</div>
+    <div class="nav-item" onclick="setNav(this,'Team Access')"><span class="nav-icon">◈</span> Team Access</div>
+    <div class="nav-item" onclick="setNav(this,'Configuration')"><span class="nav-icon">◌</span> Config</div>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="user-card">
+      <div class="user-avatar">AD</div>
+      <div style="flex:1">
+        <div class="user-name">Admin</div>
+        <div class="user-role">owner · full access</div>
+      </div>
+      <span style="color:var(--muted)">⋮</span>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="header">
+    <div class="header-left">
+      <h1 id="pageTitle">Sync Dashboard</h1>
+      <p>mycompany.com · Last synced 2h ago</p>
+    </div>
+    <div class="header-right">
+      <div class="env-badge local">⬡ LOCAL</div>
+      <span style="color:var(--muted);font-size:16px">⇄</span>
+      <div class="env-badge live">● LIVE</div>
+      <button class="btn btn-outline" onclick="openSiteModal()">+ Add Site</button>
+      <button class="btn btn-primary" onclick="runSync('both')">⚡ Quick Sync</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Stats -->
+    <div class="status-bar">
+      <div class="stat-card">
+        <div class="stat-label">Git Commits Ahead</div>
+        <div class="stat-value blue">3</div>
+        <div class="stat-sub">not pushed to live</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Files Changed</div>
+        <div class="stat-value orange">12</div>
+        <div class="stat-sub">since last sync</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Plugins Synced</div>
+        <div class="stat-value green">18/20</div>
+        <div class="stat-sub">2 need update</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">DB Status</div>
+        <div class="stat-value red">BEHIND</div>
+        <div class="stat-sub">live DB is newer</div>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-label">
+        <span id="progressLabel">Syncing...</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+
+    <!-- Sync Grid -->
+    <div class="sync-grid">
+      <!-- Pull -->
+      <div class="sync-card">
+        <div class="sync-card-header">
+          <div class="sync-card-title"><span style="color:var(--green)">↓</span> Pull from Live</div>
+          <button class="btn-pull" onclick="runSync('pull')">↓ Pull Selected</button>
+        </div>
+        <div class="sync-card-body">
+          <div class="tabs">
+            <button class="tab active" onclick="switchTab(this)">All</button>
+            <button class="tab" onclick="switchTab(this)">Files</button>
+            <button class="tab" onclick="switchTab(this)">DB</button>
+            <button class="tab" onclick="switchTab(this)">Plugins</button>
+          </div>
+          <div class="component-list">
+            <div class="component-row selected" onclick="toggleComp(this)">
+              <div class="comp-check">✓</div>
+              <span class="comp-icon">🗄</span>
+              <div class="comp-info"><div class="comp-name">Database</div><div class="comp-detail">wp_options, wp_posts, wp_users</div></div>
+              <span class="comp-status behind">BEHIND</span>
+            </div>
+            <div class="component-row" onclick="toggleComp(this)">
+              <div class="comp-check"></div>
+              <span class="comp-icon">🎨</span>
+              <div class="comp-info"><div class="comp-name">Theme Files</div><div class="comp-detail">wp-content/themes/mytheme</div></div>
+              <span class="comp-status synced">SYNCED</span>
+            </div>
+            <div class="component-row selected" onclick="toggleComp(this)">
+              <div class="comp-check">✓</div>
+              <span class="comp-icon">⬡</span>
+              <div class="comp-info"><div class="comp-name">Plugins</div><div class="comp-detail">2 updates available</div></div>
+              <span class="comp-status changed">2 NEW</span>
+            </div>
+            <div class="component-row" onclick="toggleComp(this)">
+              <div class="comp-check"></div>
+              <span class="comp-icon">🖼</span>
+              <div class="comp-info"><div class="comp-name">Media / Uploads</div><div class="comp-detail">wp-content/uploads/</div></div>
+              <span class="comp-status synced">SYNCED</span>
+            </div>
+            <div class="component-row" onclick="toggleComp(this)">
+              <div class="comp-check"></div>
+              <span class="comp-icon">⚙</span>
+              <div class="comp-info"><div class="comp-name">wp-config values</div><div class="comp-detail">Merge live config</div></div>
+              <span class="comp-status synced">SYNCED</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Push -->
+      <div class="sync-card">
+        <div class="sync-card-header">
+          <div class="sync-card-title"><span style="color:var(--accent)">↑</span> Push to Live</div>
+          <button class="btn-push" onclick="runSync('push')">↑ Push Selected</button>
+        </div>
+        <div class="sync-card-body">
+          <div class="tabs">
+            <button class="tab active" onclick="switchTab(this)">All</button>
+            <button class="tab" onclick="switchTab(this)">Files</button>
+            <button class="tab" onclick="switchTab(this)">DB</button>
+            <button class="tab" onclick="switchTab(this)">Plugins</button>
+          </div>
+          <div class="component-list">
+            <div class="component-row selected" onclick="toggleComp(this)">
+              <div class="comp-check">✓</div>
+              <span class="comp-icon">🎨</span>
+              <div class="comp-info"><div class="comp-name">Theme Files</div><div class="comp-detail">3 files modified locally</div></div>
+              <span class="comp-status changed">CHANGED</span>
+            </div>
+            <div class="component-row selected" onclick="toggleComp(this)">
+              <div class="comp-check">✓</div>
+              <span class="comp-icon">◎</span>
+              <div class="comp-info"><div class="comp-name">Git Commits</div><div class="comp-detail">3 commits ahead of live</div></div>
+              <span class="comp-status changed">3 AHEAD</span>
+            </div>
+            <div class="component-row" onclick="toggleComp(this)">
+              <div class="comp-check"></div>
+              <span class="comp-icon">🗄</span>
+              <div class="comp-info"><div class="comp-name">Database</div><div class="comp-detail">Push local DB to live</div></div>
+              <span class="comp-status synced">SYNCED</span>
+            </div>
+            <div class="component-row" onclick="toggleComp(this)">
+              <div class="comp-check"></div>
+              <span class="comp-icon">⬡</span>
+              <div class="comp-info"><div class="comp-name">Plugins</div><div class="comp-detail">All plugins in sync</div></div>
+              <span class="comp-status synced">SYNCED</span>
+            </div>
+            <div class="component-row selected" onclick="toggleComp(this)">
+              <div class="comp-check">✓</div>
+              <span class="comp-icon">📄</span>
+              <div class="comp-info"><div class="comp-name">Custom CSS / JS</div><div class="comp-detail">style.css, custom.js</div></div>
+              <span class="comp-status changed">CHANGED</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="action-bar">
+      <div class="action-bar-label" id="actionLabel">
+        <span>2 components</span> selected for pull · <span>3 components</span> selected for push
+      </div>
+      <button class="btn-pull" onclick="runSync('pull')">↓ Pull Now</button>
+      <button class="btn-push" onclick="runSync('push')">↑ Push Now</button>
+      <button class="btn btn-primary" onclick="runSync('both')">⚡ Sync Both</button>
+    </div>
+
+    <!-- Terminal -->
+    <div class="terminal">
+      <div class="terminal-header">
+        <div class="term-dots">
+          <div class="term-dot red"></div>
+          <div class="term-dot yellow"></div>
+          <div class="term-dot green"></div>
+        </div>
+        <div class="term-title">wp-sync · terminal log</div>
+        <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:10px;font-family:var(--mono)" onclick="clearLog()">clear</button>
+      </div>
+      <div class="terminal-body" id="termLog">
+        <div class="term-line"><span class="term-prompt">$</span><span class="term-cmd"> wp-sync status</span></div>
+        <div class="term-line"><span class="term-out">✓ Connected to mycompany.com via SSH</span></div>
+        <div class="term-line"><span class="term-out">✓ Git remote origin found · 3 commits ahead</span></div>
+        <div class="term-line"><span class="term-warn">⚠ Local DB is behind live by 2h</span></div>
+        <div class="term-line"><span class="term-out">✓ 18/20 plugins in sync</span></div>
+        <div class="term-line"><span class="term-prompt">$</span><span class="term-cmd"> _</span><span class="cursor"></span></div>
+      </div>
+    </div>
+
+    <!-- Activity -->
+    <div style="animation:fadeUp 0.4s ease 0.45s both">
+      <div class="section-title">Recent Activity</div>
+      <div class="activity-list">
+        <div class="activity-item">
+          <div class="activity-dot pull"></div>
+          <div class="activity-text">DB pulled from live · search-replace done</div>
+          <span class="activity-user">by admin</span>
+          <div class="activity-time">2h ago</div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-dot push"></div>
+          <div class="activity-text">Theme files pushed · git commit a3f9c12</div>
+          <span class="activity-user">by dev01</span>
+          <div class="activity-time">5h ago</div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-dot fail"></div>
+          <div class="activity-text">Plugin sync failed · SSH timeout</div>
+          <span class="activity-user">by dev02</span>
+          <div class="activity-time">yesterday</div>
+        </div>
+        <div class="activity-item">
+          <div class="activity-dot push"></div>
+          <div class="activity-text">Full sync complete · DB + themes + plugins</div>
+          <span class="activity-user">by admin</span>
+          <div class="activity-time">2 days ago</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="siteModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>⊕ Connect New Site</h2>
+      <button class="modal-close" onclick="closeSiteModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Site Name</label>
+        <input class="form-input" placeholder="e.g. mycompany.com" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">SSH Host / IP</label>
+          <input class="form-input" placeholder="192.168.1.1" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">SSH Port</label>
+          <input class="form-input" placeholder="22" value="22" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">SSH Username</label>
+          <input class="form-input" placeholder="ubuntu" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">SSH Key Path</label>
+          <input class="form-input" placeholder="~/.ssh/id_rsa" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Remote WordPress Path</label>
+        <input class="form-input" placeholder="/var/www/html/wordpress" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Local WordPress Path</label>
+        <input class="form-input" placeholder="/Users/you/Sites/mysite" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Live URL</label>
+          <input class="form-input" placeholder="https://mycompany.com" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Local URL</label>
+          <input class="form-input" placeholder="http://localhost:8080" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeSiteModal()">Cancel</button>
+      <button class="btn btn-outline" onclick="testConn()">⚡ Test SSH</button>
+      <button class="btn btn-primary" onclick="saveSite()">Save Site</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function showToast(msg, type='info') {
+  const t = document.getElementById('toast');
+  t.className = `toast ${type}`;
+  t.innerHTML = (type==='success'?'✓ ':type==='error'?'✕ ':'⚡ ') + msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function addLog(type, text) {
+  const log = document.getElementById('termLog');
+  const old = log.querySelector('.cursor');
+  if (old) old.closest('.term-line').remove();
+  const line = document.createElement('div');
+  line.className = 'term-line';
+  const cls = {cmd:'term-cmd',success:'term-success',error:'term-error',warn:'term-warn',out:'term-out'}[type]||'term-out';
+  const pre = type==='cmd'?'<span class="term-prompt">$</span>':'';
+  line.innerHTML = `${pre}<span class="${cls}"> ${text}</span>`;
+  log.appendChild(line);
+  const cur = document.createElement('div');
+  cur.className = 'term-line';
+  cur.innerHTML = '<span class="term-prompt">$</span><span class="term-cmd"> _</span><span class="cursor"></span>';
+  log.appendChild(cur);
+  log.scrollTop = log.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('termLog').innerHTML = '<div class="term-line"><span class="term-prompt">$</span><span class="term-cmd"> _</span><span class="cursor"></span></div>';
+}
+
+function showProgress(label) {
+  document.getElementById('progressWrap').classList.add('visible');
+  document.getElementById('progressLabel').textContent = label;
+  document.getElementById('progressPct').textContent = '0%';
+  document.getElementById('progressFill').style.width = '0%';
+}
+
+function updateProgress(pct, label) {
+  document.getElementById('progressPct').textContent = pct+'%';
+  document.getElementById('progressFill').style.width = pct+'%';
+  if (label) document.getElementById('progressLabel').textContent = label;
+}
+
+function hideProgress() {
+  setTimeout(() => document.getElementById('progressWrap').classList.remove('visible'), 2000);
+}
+
+function toggleComp(row) {
+  row.classList.toggle('selected');
+  row.querySelector('.comp-check').textContent = row.classList.contains('selected') ? '✓' : '';
+}
+
+function runSync(dir) {
+  const steps = {
+    pull: [[10,'Connecting via SSH...'],[25,'Exporting live database...'],[45,'Downloading DB dump...'],[60,'Importing locally...'],[75,'Running URL search-replace...'],[88,'Syncing plugin files...'],[100,'Pull complete! ✓']],
+    push: [[10,'Staging local changes...'],[25,'Running git commit...'],[40,'Pushing to remote...'],[60,'Deploying via rsync...'],[80,'Flushing live cache...'],[100,'Push complete! ✓']],
+    both: [[10,'Starting full sync...'],[20,'SSH connection established'],[35,'Pulling database from live...'],[50,'Syncing plugins...'],[65,'Pushing theme files...'],[80,'Git push to remote...'],[90,'Flushing cache...'],[100,'Full sync complete! ✓']]
+  };
+  const labels = {pull:'Pulling from live...', push:'Pushing to live...', both:'Full sync in progress...'};
+  const cmds = {pull:'wp-sync pull --selected', push:'wp-sync push --selected --commit "deploy"', both:'wp-sync all --full'};
+  showProgress(labels[dir]);
+  addLog('cmd', cmds[dir]);
+  let i = 0;
+  const iv = setInterval(() => {
+    if (i >= steps[dir].length) { clearInterval(iv); hideProgress(); addLog('success', steps[dir][steps[dir].length-1][1]); showToast(steps[dir][steps[dir].length-1][1], 'success'); return; }
+    const [pct, msg] = steps[dir][i];
+    updateProgress(pct, msg);
+    addLog('out', msg);
+    i++;
+  }, 700);
+}
+
+function setNav(el, title) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('pageTitle').textContent = title;
+  showToast('Switched to ' + title, 'info');
+}
+
+function switchTab(el) {
+  el.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function openSiteModal() { document.getElementById('siteModal').classList.add('open'); }
+function closeSiteModal() { document.getElementById('siteModal').classList.remove('open'); }
+document.getElementById('siteModal').addEventListener('click', function(e) { if (e.target===this) closeSiteModal(); });
+
+function testConn() {
+  addLog('cmd', 'ssh -i ~/.ssh/id_rsa user@server "echo connected"');
+  showToast('Testing SSH...', 'info');
+  setTimeout(() => { addLog('success', 'SSH connection successful ✓'); showToast('Connection successful!', 'success'); }, 1400);
+}
+
+function saveSite() {
+  closeSiteModal();
+  showToast('Site saved!', 'success');
+  addLog('success', 'New site configuration saved');
+}
+</script>
+</body>
+</html>
